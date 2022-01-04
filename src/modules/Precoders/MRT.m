@@ -6,7 +6,7 @@ classdef MRT < Precoder
     end
     
     methods
-        function obj = MRT()
+        function obj = MRT(p, i)
             assert(strcmp(p.precoder.required_domain,'freq'), 'MRT Precoder requires Frequency Domain.');
         end
         

@@ -2,6 +2,10 @@ classdef Module < handle
     %MODULE. Main superclass for everything.
     % Enforces a common structure on all modules.
     % Use the create method as a factory method for all the modules.
+    %
+    % Example:
+    %
+    
     
     properties
         name
@@ -18,29 +22,35 @@ classdef Module < handle
             % populate dictionary of leaf modules
             module_dictionary = containers.Map();
             
+            module_dictionary('UEs') = @(p, i) User(p, i);
+            
             % Channels
-            module_dictionary('Quadriga') = @(p) Quadriga(p);
-            module_dictionary('LOS') = @(p) LOS(p);
+            module_dictionary('Quadriga') = @(p, i) Quadriga(p, i);
+            module_dictionary('LOS') = @(p, i) LOS(p, i);
             
             % Precoders
-            module_dictionary('ZF') = @(p) ZF(p);
-            module_dictionary('MRT') = @(p) MRT(p);
+            module_dictionary('ZF') = @(p, i) ZF(p, i);
+            module_dictionary('MRT') = @(p, i) MRT(p, i);
             
             % DPDs
-            module_dictionary('DPD') = @(p) DPD(p);
+            module_dictionary('DPD') = @(p, i) DPD(p, i);
             
             % Arrays
-            module_dictionary('PA') = @(p) PA(p);
+            module_dictionary('PA') = @(p, i) PA(p, i);
         end
         
-        function obj = create(category_name, p)
+        function objs = create(category_name, p, n_objs)
+            if nargin == 2
+                n_objs = 1;
+            end
             module_dictionary = Module.populateModuleDictionary();
             moduleConstructor = module_dictionary(p.(category_name).name);
-            obj = moduleConstructor(p);
-            obj.name = p.(category_name).name;
-            obj.required_fs = p.(category_name).required_fs;
-            obj.required_domain = p.(category_name).required_domain;
+            for i = n_objs:-1:1
+                objs(i) = moduleConstructor(p, i);
+                objs(i).name = p.(category_name).name;
+                objs(i).required_fs = p.(category_name).required_fs;
+                objs(i).required_domain = p.(category_name).required_domain;
+            end
         end
     end
 end
-

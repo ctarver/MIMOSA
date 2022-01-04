@@ -6,9 +6,10 @@ classdef MIMOSA < handle
         timestamp
         
         % Main objects
+        ues
         precoder
-        dpd
-        pa
+        dpds
+        pas
         channel
         
         % Signals at various points in the dataflow.
@@ -22,7 +23,14 @@ classdef MIMOSA < handle
     methods
         function obj = MIMOSA(p)
             obj.p = p;  % Save a copy of the params struct.
+            obj.timestamp = datestr(now); % Record tiemstamp.
             
+            % Create each of the main modules.
+            obj.precoder = Module.create('precoder', p);
+            obj.ues = Module.create('user', p, p.n_users);
+            obj.dpds =  Module.create('dpd', p, p.n_antennas);
+            obj.pas =  Module.create('pa', p, p.n_antennas);
+            obj.channel = Module.create('channel', p);
         end
         
         function run(obj)
@@ -30,8 +38,8 @@ classdef MIMOSA < handle
             
             obj.v0_s = Signal.create_ofdm();
             obj.v1_precoded = obj.precoder.use(obj.v0_s);
-            obj.v2_dpd = obj.dpd.use(obj.v1_precoded);
-            obj.v3_pa = obj.pa.use(obj.v2_dpd);
+            obj.v2_dpd = obj.dpds.use(obj.v1_precoded);
+            obj.v3_pa = obj.pas.use(obj.v2_dpd);
             obj.v4_ue_y = obj.channel.use(obj.v3_pa);
         end
         

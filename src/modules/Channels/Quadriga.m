@@ -6,7 +6,7 @@ classdef Quadriga < Channel
     end
     
     methods
-        function obj = Quadriga(p)
+        function obj = Quadriga(p, i)
             % QUADRIGA() Constructor for this class
             % Inputs:
             % p             Struct

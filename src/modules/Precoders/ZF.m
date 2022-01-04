@@ -6,7 +6,7 @@ classdef ZF < Precoder
     end
     
     methods
-        function obj = ZF(p)
+        function obj = ZF(p, i)
             assert(strcmp(p.precoder.required_domain,'freq'), 'ZF Precoder requires Frequency Domain.');
         end
         
@@ -38,6 +38,14 @@ classdef ZF < Precoder
         function update_beta_inv(obj, rho2, Es)
             P_test  = obj.P(:, :, 1);
             obj.beta_inv = sqrt(rho2)/sqrt(Es * trace(P_test*P_test'));
+        end
+        
+        function report(obj)
+           fprtinf('ZF Precoder.');
+           % TODO. Matrix set?
+           % n_subcarriers?
+           % n_ants? 
+           % n_users?
         end
     end
 end
