@@ -36,7 +36,7 @@ classdef MIMOSA < handle
         function run(obj)
             %run.
             
-            obj.v0_s = Signal.create_ofdm();
+            obj.v0_s = Signal.create_ofdm(obj.p.user.n_ue, obj.p.ofdm);
             obj.v1_precoded = obj.precoder.use(obj.v0_s);
             obj.v2_dpd = obj.dpds.use(obj.v1_precoded);
             obj.v3_pa = obj.pas.use(obj.v2_dpd);

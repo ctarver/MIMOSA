@@ -251,8 +251,21 @@ classdef Signal < handle
     end
     
     methods (Static)
-        function make_ofdm(n_symbols, sc_spacing, n_scs, fft_size)
+        function make_ofdm(n_users, ofdm_settings)
+            n_resource_elements = ofdm_settings.n_scs * ofdm_settings.n_symbols * n_users;
+            [bit_per_re, n_points_in_constellation, alphabet] = obj.convert_constellation();
+            user_data_symbols = randi(n_points_in_constellation, n_resource_elements, 1);
+            user_bits = dec2bin(user_data_symbols - 1);
+            user_fd_symbols = alphabet(user_data_symbols);
+            user_fd_symbols = reshape(user_fd_symbols, [obj.n_users, obj.n_symbols, obj.n_data_scs]); % I don't know that i like this ordering of dims
             
+            % Normalize. Make so the expectation of abs([s_w]_m)^2 = 1/M. Where w is the tone
+            % index, m is the user, and M is the total n_users.
+            % for each tone,
+            % TODO. This only works for PSKs.
+            per_sc_current_energy = abs(user_fd_symbols(1,1,1));
+            norm_factor = sqrt(1/obj.n_users)/per_sc_current_energy;
+            user_fd_symbols = norm_factor * user_fd_symbols;
         end
     end
 end
