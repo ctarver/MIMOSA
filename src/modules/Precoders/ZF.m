@@ -12,6 +12,7 @@ classdef ZF < Precoder
         
         function X = subclass_use(obj, S)
             %USE. Transmit with linear precoder
+            assert(~isempty(obj.P), 'Precoder not set yet. Use update method.');
             [obj.n_ant, ~, n_fft_bins] = size(obj.P);
             [~, n_symbols, n_scs] = size(S);
             X = zeros(obj.n_ant, n_symbols, n_scs);

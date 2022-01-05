@@ -30,7 +30,10 @@ classdef MIMOSA < handle
             obj.ues = Module.create('user', p, p.n_users);
             obj.dpds =  Module.create('dpd', p, p.n_antennas);
             obj.pas =  Module.create('pa', p, p.n_antennas);
-            %obj.channel = Module.create('channel', p);
+            obj.channel = Module.create('channel', p);
+            
+            % Do any other preprocessing to set up.
+            obj.precoder.update(obj.channel.H);
         end
         
         function run(obj)
