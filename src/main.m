@@ -10,7 +10,7 @@ p.n_users = 2;
 
 p.user.name = 'UEs';
 p.user.required_domain = 'time';
-p.user.required_fs = 122.88e6;
+p.user.required_fs = 61.44e6;
 p.user.n_ue = 2;
 p.user.random_drop = 0;
 p.user.theta = [70, 120];     % degrees
@@ -24,11 +24,11 @@ p.ofdm.constellation = 'QPSK';
 
 p.precoder.name = 'ZF'; % 'ZF' or 'MRT'
 p.precoder.required_domain = 'freq';
-p.precoder.required_fs = 122.88e6;
+p.precoder.required_fs = 61.44e6;
 
 p.dpd.name = 'DPD';
 p.dpd.required_domain = 'time';
-p.dpd.required_fs = 122.88e6;
+p.dpd.required_fs = 61.44e6;
 p.dpd_model.name = 'Bypass';  % Bypass or GMP
 p.dpd_model.required_domain = p.dpd.required_domain;
 p.dpd_model.required_fs = p.dpd.required_fs;
@@ -38,7 +38,7 @@ p.dpd_model.L = 0; % Lag/Lead depth for GMP DPD.
 
 p.pa.name = 'PA';
 p.pa.required_domain = 'time';
-p.pa.required_fs = 122.88e6;
+p.pa.required_fs = 61.44e6;
 p.pa_model.name = 'GMP'; % Or Bypass. Bypass = linear.
 p.pa_model.required_domain = p.pa.required_domain;
 p.pa_model.required_fs = p.pa.required_fs;
@@ -49,7 +49,7 @@ p.pa_model.variance = 0.01; % Variance in models across array.
 
 p.channel.name = 'Quadriga'; % 'quadriga' or 'LOS'
 p.channel.required_domain = 'freq';
-p.channel.required_fs = 122.88e6;
+p.channel.required_fs = 61.44e6;
 p.channel.f_c = 3.5e9;
 p.channel.ant_spacing = 0.5;
 
