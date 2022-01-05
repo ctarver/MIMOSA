@@ -3,6 +3,9 @@ classdef Quadriga < Channel
     
     properties
         layout
+        H   % Channel matrix
+        n_ue
+        n_ant        
     end
     
     methods

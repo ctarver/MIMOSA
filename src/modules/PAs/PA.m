@@ -1,22 +1,21 @@
-classdef PA
-    %PA Summary of this class goes here
-    %   Detailed explanation goes here
+classdef PA < Module
+    %PA.
     
     properties
-        Property1
+        model
     end
     
     methods
-        function obj = PA(inputArg1,inputArg2)
-            %PA Construct an instance of this class
-            %   Detailed explanation goes here
-            obj.Property1 = inputArg1 + inputArg2;
+        function obj = PA(p, i)
+            % Constructing obj arrays require ability to have nargin == 0 
+            if nargin == 0
+               return ;  
+            end
+            obj.model = Module.create('pa_model', p);
         end
         
-        function outputArg = method1(obj,inputArg)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+        function report(obj)
+           fprintf('PA'); 
         end
     end
 end

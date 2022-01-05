@@ -17,6 +17,16 @@ classdef Module < handle
         report(obj);  % All classes should have a report method to print out some details.
     end
     
+    methods
+        function out_signal = use(obj, input_signal)
+            input_signal.match_this(obj.required_domain, obj.required_fs);
+            input_data = input_signal.extract_data();
+            output_data = obj.subclass_use(input_data);
+            out_signal = Signal(output_data, n_streams, obj.required_domain, ...
+                obj.required_fs);
+        end
+    end
+    
     methods (Static)
         function [module_dictionary] = populateModuleDictionary()
             % populate dictionary of leaf modules
@@ -37,6 +47,7 @@ classdef Module < handle
             
             % Arrays
             module_dictionary('PA') = @(p, i) PA(p, i);
+            module_dictionary('GMP') = @(p, i) GMP(p, i);
         end
         
         function objs = create(category_name, p, n_objs)
