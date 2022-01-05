@@ -2,6 +2,7 @@
 %
 % Chance Tarver
 % tarver.chance@gmail.com
+% January 2022
 
 %% Setup
 p.n_antennas = 64;
@@ -16,9 +17,10 @@ p.user.theta = [70, 120];     % degrees
 p.user.distance = [400, 400]; % meters
 
 p.ofdm.n_scs = 1200;  % Number of active data subcarriers
-p.ofdm_fft_size = 4096;
+p.ofdm.fft_size = 4096;
 p.ofdm.sc_spacing = 15e3;  % Hz
 p.ofdm.n_symbols = 14;
+p.ofdm.constellation = 'QPSK';
 
 p.precoder.name = 'ZF'; % 'ZF' or 'MRT'
 p.precoder.required_domain = 'freq';

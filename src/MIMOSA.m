@@ -30,13 +30,13 @@ classdef MIMOSA < handle
             obj.ues = Module.create('user', p, p.n_users);
             obj.dpds =  Module.create('dpd', p, p.n_antennas);
             obj.pas =  Module.create('pa', p, p.n_antennas);
-            obj.channel = Module.create('channel', p);
+            %obj.channel = Module.create('channel', p);
         end
         
         function run(obj)
             %run.
             
-            obj.v0_s = Signal.create_ofdm(obj.p.user.n_ue, obj.p.ofdm);
+            obj.v0_s = Signal.make_ofdm(obj.p.user.n_ue, obj.p.ofdm);
             obj.v1_precoded = obj.precoder.use(obj.v0_s);
             obj.v2_dpd = obj.dpds.use(obj.v1_precoded);
             obj.v3_pa = obj.pas.use(obj.v2_dpd);
