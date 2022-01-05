@@ -103,17 +103,11 @@ classdef Signal < handle
         end
         
         function change_fs(obj, desired_fs)
-            % TODO. This is only valid for OFDM. Need to generalize extra
-            % processing for various mods.
-            switch(obj.mod_settings.name)
-                case 'ofdm'
-                    try
-                        obj.mod_settings.clip_index = floor(obj.mod_settings.clip_index * desired_fs / obj.fs);
-                    catch
-                        warning('Clip index not set. Setting to 0');
-                        obj.mod_settings.clip_index = 0;
-                    end
-                otherwise
+            try
+                obj.ofdm.clip_index = floor(obj.ofdm.clip_index * desired_fs / obj.fs);
+            catch
+                warning('Clip index not set. Setting to 0');
+                obj.ofdm.clip_index = 0;
             end
             
             if strcmp(desired_fs, 'bypass')
@@ -147,13 +141,13 @@ classdef Signal < handle
             % TODO. Call TDtoFD method on each signal
             for i_stream = 1:obj.n_streams
                 this_td_data = obj.signal_array(i_stream).data;
-                resource_grid = zeros(obj.mod_settings.n_symbols, obj.mod_settings.n_scs);
-                symbol_length = obj.mod_settings.fft_size + obj.mod_settings.cp_length;
+                resource_grid = zeros(obj.ofdm.n_symbols, obj.ofdm.n_scs);
+                symbol_length = obj.ofdm.fft_size + obj.ofdm.cp_length;
                 
-                for i = 0:obj.mod_settings.n_symbols - 1
+                for i = 0:obj.ofdm.n_symbols - 1
                     td_symbol = this_td_data(symbol_length*i+1:symbol_length*(i + 1));
-                    td = td_symbol(obj.mod_settings.cp_length+1:end);
-                    fd = OFDM.time_domain_to_frequency(td, obj.mod_settings.n_scs);
+                    td = td_symbol(obj.ofdm.cp_length+1:end);
+                    fd = OFDM.time_domain_to_frequency(td, obj.ofdm.n_scs);
                     resource_grid(i+1, :) = fd;
                 end
                 obj.signal_array(i_stream).data = resource_grid;
@@ -163,30 +157,30 @@ classdef Signal < handle
         function fd_to_td(obj)
             for i_stream = 1:obj.n_streams
                 this_fd_data = obj.signal_array(i_stream).data;
-                td_symbols = zeros(obj.mod_settings.fft_size + obj.mod_settings.cp_length + ...
-                    obj.mod_settings.window_length, obj.mod_settings.n_symbols + 2); % Add 2 extra symbols. 1 before our data and 1 after to improve the cyclic ability.
+                td_symbols = zeros(obj.ofdm.fft_size + obj.ofdm.cp_length + ...
+                    obj.ofdm.window_length, obj.ofdm.n_symbols + 2); % Add 2 extra symbols. 1 before our data and 1 after to improve the cyclic ability.
                 
                 % Symbol "1" is going to be a prefix of the last symbol. 2
                 % is the start of the real data.
-                for i_sym = 1:obj.mod_settings.n_symbols
+                for i_sym = 1:obj.ofdm.n_symbols
                     [td_waveform, ~] = OFDM.fd_to_td(...
-                        this_fd_data(i_sym, :), obj.mod_settings.n_scs, obj.mod_settings.fft_size);
+                        this_fd_data(i_sym, :), obj.ofdm.n_scs, obj.ofdm.fft_size);
                     cp_td_waveform = OFDM.add_cp(td_waveform,  ...
-                        obj.mod_settings.cp_length, obj.mod_settings.window_length);
-                    td_symbols(:, i_sym+1) = OFDM.add_windowing(cp_td_waveform, obj.mod_settings.rrc_taps); % Offset of 1
+                        obj.ofdm.cp_length, obj.ofdm.window_length);
+                    td_symbols(:, i_sym+1) = OFDM.add_windowing(cp_td_waveform, obj.ofdm.rrc_taps); % Offset of 1
                 end
                 
                 % Make cyclic
-                td_symbols(:, 1) = td_symbols(:, obj.mod_settings.n_symbols+1); % Put last sym at start
+                td_symbols(:, 1) = td_symbols(:, obj.ofdm.n_symbols+1); % Put last sym at start
                 td_symbols(:, end) = td_symbols(:, 2); % Put the 1st symbol at the end.
                 
                 out_raw = OFDM.create_td_waveform(td_symbols, ...
-                    obj.mod_settings.n_symbols, obj.mod_settings.window_length,...
-                    obj.mod_settings.fft_size, obj.mod_settings.cp_length);
+                    obj.ofdm.n_symbols, obj.ofdm.window_length,...
+                    obj.ofdm.fft_size, obj.ofdm.cp_length);
                 obj.signal_array(i_stream) = Signal(out_raw,obj.signal_array(i_stream).current_fs);
                 
                 % How many samples we should cut off from each end before transmitting.
-                obj.mod_settings.clip_index = obj.mod_settings.fft_size + obj.mod_settings.cp_length;
+                obj.ofdm.clip_index = obj.ofdm.fft_size + obj.ofdm.cp_length;
             end
         end
         
