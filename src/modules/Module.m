@@ -19,11 +19,12 @@ classdef Module < handle
     
     methods
         function out_signal = use(obj, input_signal)
-            input_signal.match_this(obj.required_domain, obj.required_fs);
-            input_data = input_signal.extract_data();
-            output_data = obj.subclass_use(input_data);
+            input_signal.match_this(obj(1).required_domain, obj(1).required_fs);
+            output_data = obj.subclass_use(input_signal.data);
+            sizes = size(output_data);
+            n_streams = sizes(1);
             out_signal = Signal(output_data, n_streams, obj.required_domain, ...
-                obj.required_fs);
+                obj.required_fs, input_signal.ofdm);
         end
     end
     

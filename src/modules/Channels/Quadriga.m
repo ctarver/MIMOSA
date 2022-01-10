@@ -21,7 +21,6 @@ classdef Quadriga < Channel
                 obj.layout.visualize;
             end
             obj.create_channel_matrix(p);
-            obj.create_coupling_matrix(p);
             
             assert(strcmp(p.channel.required_domain, 'freq'));
             obj.n_ue = p.n_users;
@@ -90,8 +89,8 @@ classdef Quadriga < Channel
             obj.layout.no_rx = p.n_users;
             %  Get user locations from the users
             for i_user = 1:p.n_users
-                rx_distance = p.channel.ues.distance(i_user);
-                theta = p.channel.ues.theta(i_user);
+                rx_distance = p.user.distance(i_user);
+                theta = p.user.theta(i_user);
                 x_loc = rx_distance * sin(theta*pi/180);
                 y_loc = -rx_distance * cos(theta*pi/180);
                 obj.layout.rx_position(:,i_user) = [x_loc, y_loc, ant_height];

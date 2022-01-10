@@ -21,6 +21,8 @@ p.ofdm.fft_size = 4096;
 p.ofdm.sc_spacing = 15e3;  % Hz
 p.ofdm.n_symbols = 14;
 p.ofdm.constellation = 'QPSK';
+p.ofdm.window_length = 8;
+p.ofdm.cp_length = 144;
 
 p.precoder.name = 'ZF'; % 'ZF' or 'MRT'
 p.precoder.required_domain = 'freq';
@@ -50,8 +52,12 @@ p.pa_model.variance = 0.01; % Variance in models across array.
 p.channel.name = 'Quadriga'; % 'quadriga' or 'LOS'
 p.channel.required_domain = 'freq';
 p.channel.required_fs = 61.44e6;
+p.channel.scenario = 'RMA';  % 'RMA' Rural Macro, ... 
 p.channel.f_c = 3.5e9;
 p.channel.ant_spacing = 0.5;
+p.channel.visualize_layout = 0;
+p.channel.sc_spacing = p.ofdm.sc_spacing;
+p.channel.fft_size = p.ofdm.fft_size;
 
 %% Launch Experiment
 dataflow = MIMOSA(p);
