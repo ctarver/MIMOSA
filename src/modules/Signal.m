@@ -12,9 +12,9 @@ classdef Signal < handle
     properties
         data
         n_streams % Number of parallel streams in this data.
-        domain  % Domain of the data. 'time' or 'freq'
-        fs      % Sample rate of the data in Hz.
-        ofdm    % struct of settings related to the modulation.
+        domain    % Domain of the data. 'time' or 'freq'
+        fs        % Sample rate of the data in Hz.
+        modulator % Holds the modulator to go back/forth from td to fd
         name
         figure_style
         rms_power
@@ -23,7 +23,7 @@ classdef Signal < handle
     end
 
     methods
-        function obj = Signal(data, n_streams, domain, fs, mod_settings, name)
+        function obj = Signal(data, n_streams, domain, fs, modulator, name)
             %Signal Construct an instance of this class.
             if ~(strcmp(domain, 'freq') || strcmp(domain,'time'))
                 error('This isnt a real domain. Choose freq or time');
@@ -32,7 +32,7 @@ classdef Signal < handle
             obj.fs = fs;
             obj.data = data;
             obj.n_streams = n_streams;
-            obj.ofdm = mod_settings;
+            obj.modulator = modulator;
             if nargin == 5
                 name = '';
             end
@@ -135,85 +135,11 @@ classdef Signal < handle
         end
 
         function td_to_fd(obj)
-            % TODO. Call TDtoFD method on each signal
-            for i_stream = 1:obj.n_streams
-                this_td_data = obj.signal_array(i_stream).data;
-                resource_grid = zeros(obj.ofdm.n_symbols, obj.ofdm.n_scs);
-                symbol_length = obj.ofdm.fft_size + obj.ofdm.cp_length;
 
-                for i = 0:obj.ofdm.n_symbols - 1
-                    td_symbol = this_td_data(symbol_length*i+1:symbol_length*(i + 1));
-                    td = td_symbol(obj.ofdm.cp_length+1:end);
-                    fd = OFDM.time_domain_to_frequency(td, obj.ofdm.n_scs);
-                    resource_grid(i+1, :) = fd;
-                end
-                obj.signal_array(i_stream).data = resource_grid;
-            end
         end
 
         function fd_to_td(obj)
-            % Covert this signal from frequency domain to time domain.
-
-            % For each stream and each symbol.
-            fd_grid = obj.data;
-            [~, n_symbols, channel_fft_size] = size(fd_grid);
-            td_grid = sqrt(channel_fft_size) * ifft(fd_grid, [], 3);
-
-            % Add CP.
-            total_cp_length = obj.ofdm.cp_length + obj.ofdm.window_length;
-            cp_td_grid = zeros(obj.n_streams, n_symbols, channel_fft_size + total_cp_length);
-            cp_td_grid(:, :, total_cp_length + 1:end) = obj.data;
-            cp_td_grid(:, :, 1:total_cp_length) = obj.data(:, :, end - total_cp_length + 1:end);
-
-            % Add windowing.
-            N = length(rrc_taps);
-            out = in;
-            out(1:N) = in(1:N) .* rrc_taps;
-            out(end-N+1:end) = in(end-N+1:end) .* flip(rrc_taps);
-
-
-
-            for i_stream = 1:obj.n_streams
-                this_fd_data = obj.signal_array(i_stream).data;
-                td_symbols = zeros(obj.ofdm.fft_size + obj.ofdm.cp_length + ...
-                    obj.ofdm.window_length, obj.ofdm.n_symbols + 2); % Add 2 extra symbols. 1 before our data and 1 after to improve the cyclic ability.
-
-                % Symbol "1" is going to be a prefix of the last symbol. 2
-                % is the start of the real data.
-                for i_sym = 1:obj.ofdm.n_symbols
-                    [td_waveform, ~] = OFDM.fd_to_td(...
-                        this_fd_data(i_sym, :), obj.ofdm.n_scs, obj.ofdm.fft_size);
-                    cp_td_waveform = OFDM.add_cp(td_waveform,  ...
-                        obj.ofdm.cp_length, obj.ofdm.window_length);
-                    td_symbols(:, i_sym+1) = OFDM.add_windowing(cp_td_waveform, obj.ofdm.rrc_taps); % Offset of 1
-                end
-
-                % Make cyclic
-                td_symbols(:, 1) = td_symbols(:, obj.ofdm.n_symbols+1); % Put last sym at start
-                td_symbols(:, end) = td_symbols(:, 2); % Put the 1st symbol at the end.
-
-                out_raw = OFDM.create_td_waveform(td_symbols, ...
-                    obj.ofdm.n_symbols, obj.ofdm.window_length,...
-                    obj.ofdm.fft_size, obj.ofdm.cp_length);
-                obj.signal_array(i_stream) = Signal(out_raw,obj.signal_array(i_stream).current_fs);
-
-                % How many samples we should cut off from each end before transmitting.
-                obj.ofdm.clip_index = obj.ofdm.fft_size + obj.ofdm.cp_length;
-            end
-        end
-
-        function out = add_cp(in, cp_length, window_length)
-            total_cp_length = cp_length + window_length;
-            out = zeros(length(in) + total_cp_length, 1);
-            out(total_cp_length + 1:end) = in;
-            out(1:total_cp_length) = in(end - total_cp_length + 1:end);
-        end
-
-        function out = add_windowing(in, rrc_taps)
-            N = length(rrc_taps);
-            out = in;
-            out(1:N) = in(1:N) .* rrc_taps;
-            out(end-N+1:end) = in(end-N+1:end) .* flip(rrc_taps);
+    
         end
 
         function plot_psd(obj, fig_id)
@@ -286,85 +212,9 @@ classdef Signal < handle
 
     methods (Static)
         function obj = make_ofdm(n_users, ofdm_settings)
-            n_resource_elements = ofdm_settings.n_scs * ofdm_settings.n_symbols * n_users;
-            fs = ofdm_settings.fft_size * ofdm_settings.sc_spacing;
-            [bit_per_re, n_points_in_constellation, alphabet] = Signal.convert_constellation(ofdm_settings.constellation);
-            user_data_symbols = randi(n_points_in_constellation, n_resource_elements, 1);
-            user_bits = dec2bin(user_data_symbols - 1);
-            user_fd_symbols = alphabet(user_data_symbols);
-            user_fd_symbols = reshape(user_fd_symbols, [n_users, ofdm_settings.n_symbols, ofdm_settings.n_scs]);
-
-            % Normalize. Make so the expectation of abs([s_w]_m)^2 = 1/M. Where w is the tone
-            % index, m is the user, and M is the total n_users.
-            % for each tone,
-            % TODO. This only works for PSKs.
-            per_sc_current_energy = abs(user_fd_symbols(1,1,1));
-            norm_factor = sqrt(1/n_users)/per_sc_current_energy;
-            user_fd_symbols = norm_factor * user_fd_symbols;
-
-            % Zero pad for FFT.
-            fft_user_fd_symbols = Signal.fft_zeropad(user_fd_symbols, ofdm_settings.fft_size);
-            obj = Signal(fft_user_fd_symbols, n_users, 'freq', fs, ofdm_settings);
-        end
-
-        function upsample_user_data = fft_zeropad(user_fd_symbols, fft_size)
-            % Upsample user data to have same subcarriers as channel.
-            [n_users, n_symbols, n_scs] = size(user_fd_symbols);
-            upsample_user_data = zeros(n_users, n_symbols, fft_size);
-            i_fft_bin = fft_size - n_scs/2 + 1;
-            for i_sc = 1:n_scs
-                upsample_user_data(:, :, i_fft_bin) = user_fd_symbols(:, :, i_sc);
-                i_fft_bin = i_fft_bin + 1;
-                if i_fft_bin > fft_size
-                    i_fft_bin = 2; % We skip the DC
-                end
-            end
-        end
-
-        function [bit_per_symbol, n_points_in_constellation, alphabet] = convert_constellation(constellation)
-            %CONVERT_CONSTELLATION Convert input string to number of bits per symbols
-
-            switch constellation
-                case 'BPSK'
-                    bit_per_symbol = 1;
-                case 'QPSK'
-                    bit_per_symbol = 2;
-                case '16QAM'
-                    bit_per_symbol = 4;
-                case '64QAM'
-                    bit_per_symbol = 6;
-                case '256QAM'
-                    bit_per_symbol = 8;
-                case '1024QAM'
-                    bit_per_symbol = 10;
-                otherwise
-                    error('Unknown Constellation...');
-            end
-            n_points_in_constellation = 2^bit_per_symbol;
-            alphabet = Signal.get_alphabet(n_points_in_constellation);
-        end
-
-        function alphabet = get_alphabet(order)
-            alphaMqam = -(sqrt(order)-1):2:(sqrt(order)-1);
-            A = repmat(alphaMqam,sqrt(order),1);
-            B = flipud(A');
-            const_qam = A+1j*B;
-            alphabet = const_qam(:);
-        end
-
-        function generate_rrc(obj)
-            window_length_dictionary = containers.Map(obj.n_active_scs, ...
-                obj.window_lengths);
-            try
-                obj.window_length = window_length_dictionary(obj.n_scs);
-            catch
-                obj.window_length = 8;
-            end
-            N = obj.window_length;
-            obj.rrc_taps = zeros(N, 1);
-            for i = 1:N
-                obj.rrc_taps(i) = 0.5 * (1 - sin(pi*(N + 1 - 2 * i)/(2 * N)));
-            end
+            my_ofdm = OFDM(ofdm_settings);
+            fd_data = my_ofdm.use();
+            obj = Signal(fd_data, n_users, 'freq', my_ofdm.sampling_rate, my_ofdm);
         end
     end
 
