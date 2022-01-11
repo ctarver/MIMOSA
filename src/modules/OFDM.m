@@ -82,6 +82,7 @@ classdef OFDM < handle
 
             % Fill in other settings based on current inputs.
             obj.sampling_rate = obj.sc_spacing * obj.fft_size;
+            obj.n_resource_elements = obj.n_scs * obj.n_symbols * obj.n_users;
             obj.calculate_cp();
 
             if obj.use_windowing
@@ -101,7 +102,6 @@ classdef OFDM < handle
 
             % Create data subcarriers for users
             rng(obj.seed);
-            obj.n_resource_elements = obj.n_scs * obj.n_symbols * obj.n_users;
             [bit_per_re, n_points_in_constellation, alphabet] = obj.convert_constellation();
             user_data_symbols = randi(n_points_in_constellation, obj.n_resource_elements, 1);
             obj.user_bits = dec2bin(user_data_symbols - 1);
@@ -115,6 +115,14 @@ classdef OFDM < handle
             per_sc_current_energy = abs(user_fd_symbols(1,1,1));
             norm_factor = sqrt(1/obj.n_users)/per_sc_current_energy;
             user_fd_symbols = norm_factor * user_fd_symbols;
+        end
+
+        function td_data = td_to_fd(obj)
+            td_data = 1;
+        end
+
+        function fd_data = fd_to_td(obj)
+            fd_data = 1;
         end
     end
 

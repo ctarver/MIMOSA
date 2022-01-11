@@ -55,24 +55,15 @@ classdef Signal < handle
         end
 
         function freq_shift(obj,offset)
-            for i_stream = 1:obj.n_streams
-                % Shift Spectrum
-                obj.signal_array(i_stream).freq_shift(offset);
-            end
+            % TODO.
         end
 
         function powers = calculate_current_rms_dbm(obj)
-            powers = zeros(1,obj.n_streams);
-            for i_stream = 1:obj.n_streams
-                obj.signal_array(i_stream).calculate_current_rms_dbm()
-                powers(i_stream) = obj.signal_array(i_stream).rms_power;
-            end
+            % TODO.
         end
 
         function normalize_to_this_rms(obj, this_rms)
-            for i_stream = 1:obj.n_streams
-                obj.signal_array(i_stream).normalize_to_this_rms(this_rms);
-            end
+            % TODO.
         end
 
         function gain(obj, gain_amount)
@@ -91,10 +82,10 @@ classdef Signal < handle
             if strcmp(desired_domain, 'bypass')
                 return
             elseif strcmp(obj.domain, 'freq')  && strcmp(desired_domain, 'time')
-                obj.fd_to_td();
+                obj.data = obj.modulator.fd_to_td();
                 obj.domain = 'time';
             elseif strcmp(obj.domain, 'time')  && strcmp(desired_domain, 'freq')
-                obj.td_to_fd();
+                obj.data = obj.modulator.td_to_fd();
                 obj.domain = 'freq';
             end
         end
@@ -132,14 +123,6 @@ classdef Signal < handle
                 obj.signal_array(i).downsample(desired_fs);
             end
             obj.fs = desired_fs;
-        end
-
-        function td_to_fd(obj)
-
-        end
-
-        function fd_to_td(obj)
-    
         end
 
         function plot_psd(obj, fig_id)
