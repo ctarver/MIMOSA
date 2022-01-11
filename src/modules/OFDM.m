@@ -83,7 +83,7 @@ classdef OFDM < handle
             % Fill in other settings based on current inputs.
             obj.sampling_rate = obj.sc_spacing * obj.fft_size;
             obj.n_resource_elements = obj.n_scs * obj.n_symbols * obj.n_users;
-            obj.calculate_cp();
+            obj.cp_length = OFDM.calculate_cp(obj.sampling_rate, obj.sc_spacing);
 
             if obj.use_windowing
                 obj.generate_rrc();
@@ -96,13 +96,13 @@ classdef OFDM < handle
             end
         end
 
-        function user_fd_symbols = use(obj)
+        function user_fd_symbols = modulate(obj)
             %use. Use the current settings to generate a frequency domain
             %OFDM signal.
 
             % Create data subcarriers for users
             rng(obj.seed);
-            [bit_per_re, n_points_in_constellation, alphabet] = obj.convert_constellation();
+            [alphabet, bit_per_re, n_points_in_constellation] = OFDM.convert_constellation(obj.constellation);
             user_data_symbols = randi(n_points_in_constellation, obj.n_resource_elements, 1);
             obj.user_bits = dec2bin(user_data_symbols - 1);
             user_fd_symbols = alphabet(user_data_symbols);
@@ -117,6 +117,11 @@ classdef OFDM < handle
             user_fd_symbols = norm_factor * user_fd_symbols;
         end
 
+        function demodulate()
+            % demodulate. Take the IQ data and convert back to bits.
+
+        end
+
         function td_data = td_to_fd(obj)
             td_data = 1;
         end
@@ -127,14 +132,6 @@ classdef OFDM < handle
     end
 
     methods (Access = protected)
-        function calculate_cp(obj)
-            period = obj.sampling_rate^-1;
-            cp_dictionary = containers.Map(obj.subcarrier_spacings, ...
-                obj.cp_lengths_us_normal);
-            cp_length_us = cp_dictionary(obj.sc_spacing/1000) * 1e-6;
-            obj.cp_length = round(cp_length_us/period);
-        end
-
         function generate_rrc(obj)
             window_length_dictionary = containers.Map(obj.n_active_scs, ...
                 obj.window_lengths);
@@ -149,11 +146,18 @@ classdef OFDM < handle
                 obj.rrc_taps(i) = 0.5 * (1 - sin(pi*(N + 1 - 2 * i)/(2 * N)));
             end
         end
+    end
 
-        function [bit_per_symbol, n_points_in_constellation, alphabet] = convert_constellation(obj)
+    % These are generic, so I am making them static utilities.
+    methods (Static)
+        function [alphabet, bit_per_symbol, n_points_in_constellation] = convert_constellation(constellation)
             %CONVERT_CONSTELLATION Convert input string to number of bits per symbols
+            %
+            % Example:
+            %   [bit_per_symbol, n_points_in_constellation, alphabet] =
+            %   convert_constelation('QPSK');
 
-            switch obj.constellation
+            switch constellation
                 case 'BPSK'
                     bits_per_symbol = 1;
                 case 'QPSK'
@@ -170,15 +174,39 @@ classdef OFDM < handle
                     error('Unknown Constellation...');
             end
             n_points_in_constellation = 2^bit_per_symbol;
-            alphabet = obj.get_alphabet(n_points_in_constellation);
+            alphabet = OFDM.get_alphabet(n_points_in_constellation);
         end
 
-        function alphabet = get_alphabet(~, order)
+        function alphabet = get_alphabet(order)
+            % get_alphabet. Generates the contellation points for the given
+            % modulation order.
+            %
+            % Example:
+            %   alphabet = OFDM.get_alphabet(4); % Get constellation points
+            %   for mod order 4, QPSK.
+
+            assert(rem(sqrt(order), 1) == 0, 'Input modulation order must be a square')
+
             alphaMqam = -(sqrt(order)-1):2:(sqrt(order)-1);
             A = repmat(alphaMqam,sqrt(order),1);
             B = flipud(A');
             const_qam = A+1j*B;
             alphabet = const_qam(:);
+        end
+
+        function cp_length = calculate_cp(fs, sc_spacing)
+            % calculate_cp. Calculates the number of cyclic prefix samples
+            % to use based on 5G numerology, current sample rate, and
+            % sc_spacing.
+            %
+            % Example:
+            %  n_cp_samples = OFDM.calculate_cp(fs, sc_spacing);
+
+            period = fs^-1;
+            cp_dictionary = containers.Map(OFDM.subcarrier_spacings, ...
+                OFDM.cp_lengths_us_normal);
+            cp_length_us = cp_dictionary(sc_spacing/1000) * 1e-6;
+            cp_length = round(cp_length_us/period);
         end
     end
 end

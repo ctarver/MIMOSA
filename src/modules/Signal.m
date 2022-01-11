@@ -196,7 +196,7 @@ classdef Signal < handle
     methods (Static)
         function obj = make_ofdm(n_users, ofdm_settings)
             my_ofdm = OFDM(ofdm_settings);
-            fd_data = my_ofdm.use();
+            fd_data = my_ofdm.modulate();
             obj = Signal(fd_data, n_users, 'freq', my_ofdm.sampling_rate, my_ofdm);
         end
     end
