@@ -38,9 +38,12 @@ classdef OFDM < handle
         rrc_taps
         cp_length
         n_resource_elements
+        alphabet
+        n_points_in_constellation
 
         %% Extra storage in case we wanat to look at later.
         user_bits
+        original_fd
     end
 
     properties (Constant, Hidden)
@@ -84,6 +87,7 @@ classdef OFDM < handle
             obj.sampling_rate = obj.sc_spacing * obj.fft_size;
             obj.n_resource_elements = obj.n_scs * obj.n_symbols * obj.n_users;
             obj.cp_length = OFDM.calculate_cp(obj.sampling_rate, obj.sc_spacing);
+            [obj.alphabet, bit_per_re, obj.n_points_in_constellation] = OFDM.convert_constellation(obj.constellation);
 
             if obj.use_windowing
                 obj.generate_rrc();
@@ -96,16 +100,15 @@ classdef OFDM < handle
             end
         end
 
-        function user_fd_symbols = modulate(obj)
+        function full_fd_data = modulate(obj)
             %use. Use the current settings to generate a frequency domain
             %OFDM signal.
 
             % Create data subcarriers for users
             rng(obj.seed);
-            [alphabet, bit_per_re, n_points_in_constellation] = OFDM.convert_constellation(obj.constellation);
-            user_data_symbols = randi(n_points_in_constellation, obj.n_resource_elements, 1);
+            user_data_symbols = randi(obj.n_points_in_constellation, obj.n_resource_elements, 1);
             obj.user_bits = dec2bin(user_data_symbols - 1);
-            user_fd_symbols = alphabet(user_data_symbols);
+            user_fd_symbols = obj.alphabet(user_data_symbols);
             user_fd_symbols = reshape(user_fd_symbols, [obj.n_users, obj.n_symbols, obj.n_scs]);
 
             % Normalize. Make so the expectation of abs([s_w]_m)^2 = 1/M. Where w is the tone
@@ -115,19 +118,49 @@ classdef OFDM < handle
             per_sc_current_energy = abs(user_fd_symbols(1,1,1));
             norm_factor = sqrt(1/obj.n_users)/per_sc_current_energy;
             user_fd_symbols = norm_factor * user_fd_symbols;
+
+            % Fill in full FFT.
+            full_fd_data = zeros(obj.n_users, obj.n_symbols, obj.fft_size);
+            full_fd_data(:,:, end-obj.n_scs/2+1:end) = user_fd_symbols(:, :, 1:obj.n_scs/2);
+            full_fd_data(:,:, 2:obj.n_scs/2+1) = user_fd_symbols(:, :, obj.n_scs/2+1:end); % We skip sc 1 (DC).
+            obj.original_fd = full_fd_data;
         end
 
-        function demodulate()
+        function demodulate(obj, full_fd_data)
             % demodulate. Take the IQ data and convert back to bits.
+            % This function assumes that the input data is in the frequency
+            % domain!
+
+            [in_n_users, in_n_symbols, in_fft_size] = size(full_fd_data);
+            assert(in_n_users==obj.n_users && in_n_symbols==obj.n_symbols && ...
+                in_fft_size==obj.fft_size, 'Input Dimensions Not Correct!');
+
+            % Undo fft packing.
+            user_fd_symbols = 
+
+
 
         end
 
-        function td_data = td_to_fd(obj)
-            td_data = 1;
-        end
-
-        function fd_data = fd_to_td(obj)
+        function fd_data = td_to_fd(obj)
             fd_data = 1;
+        end
+
+        function td_data = fd_to_td(obj, fd_symbols)
+            td_grid = ifft(fd_symbols);
+            cp_td_waveform = obj.add_cp(td_grid);
+            td_data = obj.add_windows(cp_td_waveform);
+        end
+
+        function calculate_evm(obj, full_fd_data)
+            [in_n_users, in_n_symbols, in_fft_size] = size(full_fd_data);
+            assert(in_n_users==obj.n_users && in_n_symbols==obj.n_symbols && ...
+                in_fft_size==obj.fft_size, 'Input Dimensions Not Correct!');            
+            
+        end
+
+        function get_ber(obj, full_fd_data)
+
         end
     end
 
@@ -145,6 +178,14 @@ classdef OFDM < handle
             for i = 1:N
                 obj.rrc_taps(i) = 0.5 * (1 - sin(pi*(N + 1 - 2 * i)/(2 * N)));
             end
+        end
+
+        function out = add_cp(obj, in)
+
+        end
+
+        function out = add_windows(obj, in)
+
         end
     end
 
