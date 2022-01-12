@@ -30,6 +30,7 @@ classdef OFDM < handle
         constellation
         use_windowing
         window_length
+        make_cyclic  % Makes whole OFDM waveform cyclic by making a fake 1st symbol = last symbol.
         use_random
         seed
 
@@ -37,9 +38,11 @@ classdef OFDM < handle
         sampling_rate
         rrc_taps
         cp_length
-        n_resource_elements
+        n_resource_elements  % Per user stream.
         alphabet
+        bit_per_re
         n_points_in_constellation
+        trim_index 
 
         %% Extra storage in case we wanat to look at later.
         user_bits
@@ -72,6 +75,7 @@ classdef OFDM < handle
             addParameter(vars, 'constellation', 'QPSK', @(x) any(validatestring(x,valid_constellations)));
             addParameter(vars, 'use_windowing', true, validBool);
             addParameter(vars, 'window_length', 8, validScalarPosNum);
+            addParameter(vars, 'make_cyclic', true, validBool);
             addParameter(vars, 'use_random', true, validBool);
             addParameter(vars, 'seed', 0, validScalarPosNum);
             parse(vars, varargin{:});
@@ -84,9 +88,9 @@ classdef OFDM < handle
 
             % Fill in other settings based on current inputs.
             obj.sampling_rate = obj.sc_spacing * obj.fft_size;
-            obj.n_resource_elements = obj.n_scs * obj.n_symbols * obj.n_users;
+            obj.n_resource_elements = obj.n_scs * obj.n_symbols;
             obj.cp_length = OFDM.calculate_cp(obj.sampling_rate, obj.sc_spacing);
-            [obj.alphabet, bit_per_re, obj.n_points_in_constellation] = OFDM.convert_constellation(obj.constellation);
+            [obj.alphabet, obj.bit_per_re, obj.n_points_in_constellation] = OFDM.convert_constellation(obj.constellation);
 
             if obj.use_windowing
                 obj.generate_rrc();
@@ -102,13 +106,17 @@ classdef OFDM < handle
         function full_fd_data = modulate(obj)
             %use. Use the current settings to generate a frequency domain
             %OFDM signal.
+            %
+            % Example:
+            %  full_fd_data = my_ofdm.modulate()
+            %  full_fd_data = [scs, n_symbols, n_users]
 
             % Create data subcarriers for users
             rng(obj.seed);
-            user_data_symbols = randi(obj.n_points_in_constellation, obj.n_resource_elements, 1);
-            obj.user_bits = dec2bin(user_data_symbols - 1);
+            user_data_symbols = randi(obj.n_points_in_constellation, obj.n_resource_elements, obj.n_users);
+            obj.user_bits = obj.symbol_to_binary(user_data_symbols);
             user_fd_symbols = obj.alphabet(user_data_symbols);
-            user_fd_symbols = reshape(user_fd_symbols, [obj.n_users, obj.n_symbols, obj.n_scs]);
+            user_fd_symbols = reshape(user_fd_symbols, [obj.n_scs, obj.n_symbols, obj.n_users]);
 
             % Normalize. Make so the expectation of abs([s_w]_m)^2 = 1/M. Where w is the tone
             % index, m is the user, and M is the total n_users.
@@ -119,9 +127,9 @@ classdef OFDM < handle
             user_fd_symbols = norm_factor * user_fd_symbols;
 
             % Fill in full FFT.
-            full_fd_data = zeros(obj.n_users, obj.n_symbols, obj.fft_size);
-            full_fd_data(:,:, end-obj.n_scs/2+1:end) = user_fd_symbols(:, :, 1:obj.n_scs/2);
-            full_fd_data(:,:, 2:obj.n_scs/2+1) = user_fd_symbols(:, :, obj.n_scs/2+1:end); % We skip sc 1 (DC).
+            full_fd_data = zeros(obj.fft_size, obj.n_symbols, obj.n_users);
+            full_fd_data(end-obj.n_scs/2+1:end, :,:) = user_fd_symbols(1:obj.n_scs/2, :, :);
+            full_fd_data(2:obj.n_scs/2+1, :,:) = user_fd_symbols(obj.n_scs/2+1:end,:, :); % We skip sc 1 (DC).
             obj.original_fd = full_fd_data;
         end
 
@@ -163,6 +171,18 @@ classdef OFDM < handle
     end
 
     methods (Access = protected)
+        function out = symbol_to_binary(obj, in_symbols)
+            [n_points, n_ues] = size(in_symbols);
+            user_bits = dec2bin(user_data_symbols - 1, obj.bit_per_re); 
+            % The dimensions on user_bits are funny. The char comes out row
+            % major, but matlab likes columns... Other dimensions are lost.
+            % This makes it weird to searilize by user 
+            out = zeros([n_points*obj.bit_per_re, n_ues]);
+            user_bits = user_bits.';
+            user_bits_serialized = user_bits(:); % Column major. 
+            out = reshape(user_bits_serialized, [n_points*obj.bit_per_re, n_ues]);
+        end
+
         function generate_rrc(obj)
             window_length_dictionary = containers.Map(obj.n_active_scs, ...
                 obj.window_lengths);
@@ -191,10 +211,43 @@ classdef OFDM < handle
             N = length(obj.rrc_taps);
             out = in;
 
-            % TODO. Make the rrc taps a matrix?
+            % Make a matrix version of the rrx tabs so we can do element
+            % wise mult. Couldn't find a nice repmat to do what I wanted.
+            [n_streams, n_symbols, fft_size] = size(in);
+            rrc_matrix = ones(n_streams, n_symbols, N);
+            for i = 1:N
+                rrc_matrix(:,:,i) = obj.rrc_taps(i);
+            end
 
-            out(:, :, 1:N) = in(:, :, 1:N) .* obj.rrc_taps;
-            out(end-N+1:end) = in(end-N+1:end) .* flip(obj.rrc_taps);
+            out(:,:, 1:N) = in(:,:, 1:N) .* rrc_matrix;  % Ramp up this symbol
+            out(:,:, end-N+1:end) = in(:,:,end-N+1:end) .* flip(rrc_matrix, 3); % Ramp down this symbol.
+        end
+
+
+        function out = make_td_vector(obj, in_grid)
+            [n_streams, n_symbols, n_samples] = size(in_grid);
+
+            N = obj.window_length;
+            K = obj.n_symbols + obj.make_cyclic;  % Add preamble symbol for processing if cyclic.
+            samp_per_sym = obj.fft_size + obj.cp_length;
+            pre_out = zeros(samp_per_sym*K, n_streams);  
+
+            % Combine each symbol into a vector accounting for windowing.
+            % first symbol is special 
+            pre_out(1:samp_per_sym) = in(N+1:end, 1);
+            
+            % Other symbols overlap with previous
+            for i = 2:K
+                current_index = (i - 1) * samp_per_sym + 1 - N;
+                pre_out(current_index:current_index+samp_per_sym+N-1) = pre_out(current_index:current_index+samp_per_sym+N-1) + in(:, i);
+            end
+            
+            if obj.make_cyclic
+                out = zeros((samp_per_sym)*obj.n_symbols, 1);
+                out = pre_out(1:length(out));
+            else
+                out = pre_out;
+            end            
         end
     end
 
