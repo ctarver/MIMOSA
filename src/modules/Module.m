@@ -24,7 +24,7 @@ classdef Module < handle
             sizes = size(output_data);
             n_streams = sizes(1);
             out_signal = Signal(output_data, n_streams, obj.required_domain, ...
-                obj.required_fs, input_signal.ofdm);
+                obj.required_fs, input_signal.modulator);
         end
     end
     

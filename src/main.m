@@ -22,7 +22,6 @@ p.ofdm.sc_spacing = 15e3;  % Hz
 p.ofdm.n_symbols = 14;
 p.ofdm.constellation = 'QPSK';
 p.ofdm.window_length = 8;
-p.ofdm.cp_length = 144;
 
 p.precoder.name = 'ZF'; % 'ZF' or 'MRT'
 p.precoder.required_domain = 'freq';

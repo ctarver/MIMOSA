@@ -62,7 +62,6 @@ classdef OFDM < handle
             vars = inputParser;
             valid_constellations = {'BPSK', 'QPSK', '16QAM','64QAM'};
             validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
-            validConstellation = @(x) validatestring(x, valid_constellations);
             validBool = @(x) islogical(x);
 
             addParameter(vars, 'n_users', 1, validScalarPosNum);
@@ -70,7 +69,7 @@ classdef OFDM < handle
             addParameter(vars, 'n_scs', 1200, validScalarPosNum);
             addParameter(vars, 'fft_size', 4096, validScalarPosNum);
             addParameter(vars,'sc_spacing', 15e3, validScalarPosNum);
-            addParameter(vars, 'constellation', 'QPSK', validConstellation);
+            addParameter(vars, 'constellation', 'QPSK', @(x) any(validatestring(x,valid_constellations)));
             addParameter(vars, 'use_windowing', true, validBool);
             addParameter(vars, 'window_length', 8, validScalarPosNum);
             addParameter(vars, 'use_random', true, validBool);
@@ -136,8 +135,7 @@ classdef OFDM < handle
                 in_fft_size==obj.fft_size, 'Input Dimensions Not Correct!');
 
             % Undo fft packing.
-            user_fd_symbols = 
-
+            user_fd_symbols = 1;
 
 
         end
