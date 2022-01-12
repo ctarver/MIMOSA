@@ -145,7 +145,7 @@ classdef OFDM < handle
         end
 
         function td_data = fd_to_td(obj, fd_symbols)
-            td_grid = ifft(fd_symbols);
+            td_grid = ifft(fd_symbols, [], 3);  % Perform IFFT along subcarrier dimension.
             cp_td_waveform = obj.add_cp(td_grid);
             td_data = obj.add_windows(cp_td_waveform);
         end
@@ -153,8 +153,8 @@ classdef OFDM < handle
         function calculate_evm(obj, full_fd_data)
             [in_n_users, in_n_symbols, in_fft_size] = size(full_fd_data);
             assert(in_n_users==obj.n_users && in_n_symbols==obj.n_symbols && ...
-                in_fft_size==obj.fft_size, 'Input Dimensions Not Correct!');            
-            
+                in_fft_size==obj.fft_size, 'Input Dimensions Not Correct!');
+
         end
 
         function get_ber(obj, full_fd_data)
@@ -179,11 +179,22 @@ classdef OFDM < handle
         end
 
         function out = add_cp(obj, in)
+            [n_streams, n_symbols, fft_size] = size(in);
+            total_cp = obj.cp_length + obj.window_length;
+            out = zeros(n_streams, n_symbols, fft_size + total_cp);
 
+            out(:,:,1:total_cp) = in(:, :, end-total_cp+1:end);
+            out(:,:,total_cp+1:end) = in;
         end
 
         function out = add_windows(obj, in)
+            N = length(obj.rrc_taps);
+            out = in;
 
+            % TODO. Make the rrc taps a matrix?
+
+            out(:, :, 1:N) = in(:, :, 1:N) .* obj.rrc_taps;
+            out(end-N+1:end) = in(end-N+1:end) .* flip(obj.rrc_taps);
         end
     end
 

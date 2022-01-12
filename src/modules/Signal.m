@@ -19,7 +19,6 @@ classdef Signal < handle
         figure_style
         rms_power
         papr
-        rrc_taps
     end
 
     methods
@@ -82,7 +81,7 @@ classdef Signal < handle
             if strcmp(desired_domain, 'bypass')
                 return
             elseif strcmp(obj.domain, 'freq')  && strcmp(desired_domain, 'time')
-                obj.data = obj.modulator.fd_to_td();
+                obj.data = obj.modulator.fd_to_td(obj.data);
                 obj.domain = 'time';
             elseif strcmp(obj.domain, 'time')  && strcmp(desired_domain, 'freq')
                 obj.data = obj.modulator.td_to_fd();
