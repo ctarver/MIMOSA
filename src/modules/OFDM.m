@@ -42,7 +42,7 @@ classdef OFDM < handle
         alphabet
         bit_per_re
         n_points_in_constellation
-        trim_index 
+        trim_index
 
         %% Extra storage in case we wanat to look at later.
         user_bits
@@ -133,19 +133,43 @@ classdef OFDM < handle
             obj.original_fd = full_fd_data;
         end
 
-        function demodulate(obj, full_fd_data)
+        function [bits, symbols] = demodulate(obj, full_fd_data)
             % demodulate. Take the IQ data and convert back to bits.
             % This function assumes that the input data is in the frequency
             % domain!
 
-            [in_n_users, in_n_symbols, in_fft_size] = size(full_fd_data);
+            [in_fft_size, in_n_symbols, in_n_users] = size(full_fd_data);
             assert(in_n_users==obj.n_users && in_n_symbols==obj.n_symbols && ...
                 in_fft_size==obj.fft_size, 'Input Dimensions Not Correct!');
 
             % Undo fft packing.
-            user_fd_symbols = 1;
+            user_fd_symbols = zeros(obj.n_scs, obj.n_symbols, obj.n_users);
+            user_fd_symbols(1:obj.n_scs/2, :, :) = full_fd_data(end-obj.n_scs/2+1:end, :,:);
+            user_fd_symbols(obj.n_scs/2+1:end,:, :) = full_fd_data(2:obj.n_scs/2+1, :,:);
 
+            % Apply some scale factor to make it as close as possible to
+            % the original constellations.
+            % This is not optimal..... Should do LS or something.
+            scale_factor = max(abs(obj.alphabet)) / max(max(abs(user_fd_symbols)));
+            user_fd_symbols = scale_factor * user_fd_symbols;
 
+            % For each element in user_fd_symbols, which point in the
+            % alphabet is closest? I'm not sure how to better vectorize
+            % this.
+            symbols = zeros(obj.n_resource_elements, obj.n_users);
+            for k_user = 1:obj.n_users
+                i_re = 1;
+                for j_symbol = 1:obj.n_symbols
+                    for i_sc = 1:obj.n_scs
+                        this_elment = user_fd_symbols(i_sc, j_symbol, k_user);
+                        error = obj.alphabet - this_elment;
+                        [~, this_symbol] = min(error);
+                        symbols(i_re, k_user) = this_symbol;
+                        i_re = i_re + 1;
+                    end
+                end
+            end
+            bits = obj.symbol_to_binary(symbols);
         end
 
         function fd_data = td_to_fd(obj)
@@ -153,7 +177,7 @@ classdef OFDM < handle
         end
 
         function td_data = fd_to_td(obj, fd_symbols)
-            td_grid = ifft(fd_symbols, [], 3);  % Perform IFFT along subcarrier dimension.
+            td_grid = sqrt(obj.fft_size) * ifft(fd_symbols, [], 1);  % Perform IFFT along subcarrier dimension.
             cp_td_waveform = obj.add_cp(td_grid);
             td_data = obj.add_windows(cp_td_waveform);
         end
@@ -165,21 +189,31 @@ classdef OFDM < handle
 
         end
 
-        function get_ber(obj, full_fd_data)
+        function ber = get_ber(obj, bits)
+            %get_ber.
+            % Inputs:
+            %  bits. matrix of bits. (bit, user)
+            %
+            % Example:
+            %   ber = my_ofdm.get_ber(bits);
 
+            error = bin2dec(bits) - bin2dec(obj.user_bits);
+            n_errors = sum(error);
+            n_bits = length(bits);
+            ber = n_errors/n_bits;
         end
     end
 
     methods (Access = protected)
         function out = symbol_to_binary(obj, in_symbols)
             [n_points, n_ues] = size(in_symbols);
-            user_bits = dec2bin(user_data_symbols - 1, obj.bit_per_re); 
+            user_bits = dec2bin(in_symbols - 1, obj.bit_per_re);
             % The dimensions on user_bits are funny. The char comes out row
             % major, but matlab likes columns... Other dimensions are lost.
-            % This makes it weird to searilize by user 
+            % This makes it weird to searilize by user
             out = zeros([n_points*obj.bit_per_re, n_ues]);
             user_bits = user_bits.';
-            user_bits_serialized = user_bits(:); % Column major. 
+            user_bits_serialized = user_bits(:); % Column major.
             out = reshape(user_bits_serialized, [n_points*obj.bit_per_re, n_ues]);
         end
 
@@ -230,24 +264,24 @@ classdef OFDM < handle
             N = obj.window_length;
             K = obj.n_symbols + obj.make_cyclic;  % Add preamble symbol for processing if cyclic.
             samp_per_sym = obj.fft_size + obj.cp_length;
-            pre_out = zeros(samp_per_sym*K, n_streams);  
+            pre_out = zeros(samp_per_sym*K, n_streams);
 
             % Combine each symbol into a vector accounting for windowing.
-            % first symbol is special 
+            % first symbol is special
             pre_out(1:samp_per_sym) = in(N+1:end, 1);
-            
+
             % Other symbols overlap with previous
             for i = 2:K
                 current_index = (i - 1) * samp_per_sym + 1 - N;
                 pre_out(current_index:current_index+samp_per_sym+N-1) = pre_out(current_index:current_index+samp_per_sym+N-1) + in(:, i);
             end
-            
+
             if obj.make_cyclic
                 out = zeros((samp_per_sym)*obj.n_symbols, 1);
                 out = pre_out(1:length(out));
             else
                 out = pre_out;
-            end            
+            end
         end
     end
 
