@@ -4,6 +4,7 @@
 % tarver.chance@gmail.com
 % January 2022
 
+addpath(genpath('modules'))
 %% Setup
 p.n_antennas = 64;
 p.n_users = 2;
