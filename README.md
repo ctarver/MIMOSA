@@ -3,7 +3,7 @@ MIMO Simulator with Amplifiers.
 This repo simulates a Quadriga channel with GMP-based PAs and GMP-based DPD per antenna.
 
 ## Installation.
-1. Download the Repo.
+1. Download the repo.
 2. Download Quadriga and extract the "quadriga_srs" to the directory 'MIMOSA\src\modules\Channels'; .https://quadriga-channel-model.de/#Download
 
 ## Running.
