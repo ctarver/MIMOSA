@@ -1,4 +1,6 @@
 # MIMOSA
+[![DOI](https://zenodo.org/badge/440905926.svg)](https://zenodo.org/badge/latestdoi/440905926)
+
 MIMO Simulator with Amplifiers.
 This repo simulates a Quadriga channel with GMP-based PAs and GMP-based DPD per antenna.
 
