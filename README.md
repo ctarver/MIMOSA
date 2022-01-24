@@ -4,7 +4,7 @@ This repo simulates a Quadriga channel with GMP-based PAs and GMP-based DPD per 
 
 ## Installation.
 1. Download the repo.
-2. Download Quadriga and extract the "quadriga_srs" to the directory 'MIMOSA\src\modules\Channels'; .https://quadriga-channel-model.de/#Download
+2. Download Quadriga and extract the "quadriga_src" to the directory 'MIMOSA\src\modules\Channels'; .https://quadriga-channel-model.de/#Download
 
 ## Running.
 The main script is in src/main.m.
