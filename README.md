@@ -15,7 +15,7 @@ The parameters of the test are in src/params.m. Use this file to adjust the PA m
 ## Citing.
 If you use any part of this project, please cite it as:
 ```
-@misc{TarverILADPD,
+@misc{tarver_mimosa,
   author       = {Tarver, Chance},
   title        = {MIMOSA: MIMO Simulator with Amplifiers},
   month        = jan,
