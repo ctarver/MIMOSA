@@ -19,7 +19,7 @@ C. Tarver, A. Balatsoukas-Stimming, C. Studer and J. R. Cavallaro, "[OFDM-Based 
 
 
 ## Using
-The main idea behind this repo is to create an object-oriented library of DSP modules that are independednt of any specific project or application. Using these modules, we can create various applications to quickly prototype new ideas out in simulation. 
+The main idea behind this repo is to create an object-oriented library of DSP modules that are independent of any specific project or application. Using these modules, we can create various applications to quickly prototype new ideas out in simulation. 
 
 ## Citing.
 If you use any part of this project, please cite it as:
