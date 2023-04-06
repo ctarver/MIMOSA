@@ -5,7 +5,7 @@
 
 clear;clc; close all;
 %% Load modules
-addpath(genpath('modules'));
+addpath(genpath('../../modules'));
 
 %% Load all the default params
 p = params();
