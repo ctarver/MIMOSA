@@ -107,7 +107,7 @@ classdef PA_NN_Model < TXRX
             rx_train = [real(rx_data) imag(rx_data)].';
             tx_tmp = obj.build_nn_input(tx_data);
             
-            [obj.net, obj.tr] = train(obj.net, tx_tmp, rx_train, 'useParallel','yes','useGPU', 'no','showResources','yes');
+            [obj.net, obj.tr] = train(obj.net, tx_tmp, rx_train, 'useParallel','yes','useGPU', 'yes','showResources','yes');
         end
         
         function out = use_dpd_precoder(obj, input_signal)
