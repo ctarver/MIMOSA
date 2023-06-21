@@ -1,5 +1,8 @@
 %% Main GMP MIMO
 %
+% In this test, we show the Inband and OOB spectrum/beamforming with and
+% without applying DPD per antenna.
+% 
 % Chance Tarver
 % February 24, 2021
 

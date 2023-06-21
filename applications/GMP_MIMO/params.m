@@ -3,7 +3,7 @@ function p = params()
 %% Core settings
 p.n_symbols = 20;
 p.n_antennas = 64;
-p.n_users = 2;
+p.n_users = 4;
 rng(2); % 2 is a good match between OFDM DPD and MP DPD.
 
 %% UE Settings
@@ -16,7 +16,7 @@ p.users.ue_theta_vals = [70 85 100 120];
 %% Array/Channel Settings.
 p.f_c = 3.5e9; % Center Frequency
 p.channel_fft_size = 4096;
-p.channel.scenario = 'LOSonly';
+p.channel.scenario = 'LOSonly'; % Choose a channel scenario from Quadriga. Below are the options:
 % 3GPP_37.885_Highway_LOS, 3GPP_37.885_Highway_NLOSv,
 %3GPP_37.885_Urban_LOS, 3GPP_37.885_Urban_NLOS, 3GPP_37.885_Urban_NLOSv, 3GPP_38.881_DenseUrban_LOS,
 %3GPP_38.881_DenseUrban_NLOS, 3GPP_38.881_Rural_LOS, 3GPP_38.881_Rural_NLOS, 3GPP_38.881_Suburban_LOS,

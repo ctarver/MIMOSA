@@ -38,8 +38,10 @@ if plot_subcarrier
     in_band = angular_domain_fft_shift(2048-600:2048+600, :);
     u1 = angular_domain_fft_shift(2700:4000, :);
     this_plot(angles, max(in_band), 93, strcat('InBand', this_title));
+    title('InBand Bemforming');
     if ~(isinf(u1(1)))
         this_plot(angles, max(u1), 94, strcat('U1', this_title));
+        title('OOB Bemforming');
     end
 end
 end

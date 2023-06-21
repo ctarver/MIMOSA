@@ -2,7 +2,7 @@
 % Main idea is to use a NN to model the forward transfer function from user
 % data to user rx.
 %
-% Adapted from ISCAS 2020 work.
+% Adapted from ISCAS 2020 work. % TODO. Add ieee link.
 %
 % Chance Tarver
 % January 2021
